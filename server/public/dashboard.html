@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HTTP Tracker Pro — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="dashboard-page">
+
+  <!-- ================================================================ -->
+  <!-- SIDEBAR -->
+  <!-- ================================================================ -->
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-logo">⚡</span>
+      <span class="sidebar-title">HTTP Tracker</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-page="overview">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">Overview</span>
+      </a>
+      <a href="#" class="nav-item" data-page="websites">
+        <span class="nav-icon">🌐</span>
+        <span class="nav-label">Websites</span>
+      </a>
+      <a href="#" class="nav-item" data-page="requests">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">All Requests</span>
+      </a>
+      <a href="#" class="nav-item" data-page="redirects">
+        <span class="nav-icon">🔗</span>
+        <span class="nav-label">Redirects</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <span class="user-avatar">👤</span>
+        <span id="user-name" class="user-name">Admin</span>
+      </div>
+      <button id="btn-logout" class="btn-logout" title="Logout">🚪</button>
+    </div>
+  </aside>
+
+  <!-- ================================================================ -->
+  <!-- MAIN CONTENT -->
+  <!-- ================================================================ -->
+  <main id="main">
+    <header id="page-header">
+      <div>
+        <h2 id="page-title">Overview</h2>
+        <p id="page-subtitle" class="page-subtitle">Dashboard statistics and recent activity</p>
+      </div>
+      <div class="header-actions">
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="text" id="global-search" placeholder="Search requests..." autocomplete="off">
+        </div>
+      </div>
+    </header>
+
+    <!-- ============================================================ -->
+    <!-- OVERVIEW PAGE -->
+    <!-- ============================================================ -->
+    <section id="page-overview" class="page active">
+      <!-- Stats Cards -->
+      <div class="stats-grid">
+        <div class="stat-card stat-blue">
+          <div class="stat-icon">🌐</div>
+          <div class="stat-content">
+            <div class="stat-value" id="stat-websites">0</div>
+            <div class="stat-label">Websites Tracked</div>
+          </div>
+        </div>
+        <div class="stat-card stat-green">
+          <div class="stat-icon">📡</div>
+          <div class="stat-content">
+            <div class="stat-value" id="stat-requests">0</div>
+            <div class="stat-label">Total Requests</div>
+          </div>
+        </div>
+        <div class="stat-card stat-yellow">
+          <div class="stat-icon">🔗</div>
+          <div class="stat-content">
+            <div class="stat-value" id="stat-redirects">0</div>
+            <div class="stat-label">Redirect Chains</div>
+          </div>
+        </div>
+        <div class="stat-card stat-purple">
+          <div class="stat-icon">📅</div>
+          <div class="stat-content">
+            <div class="stat-value" id="stat-today">0</div>
+            <div class="stat-label">Today</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Websites -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Recent Websites</h3>
+          <a href="#" class="link-btn" data-navigate="websites">View All →</a>
+        </div>
+        <div class="card-body">
+          <table class="data-table" id="recent-websites-table">
+            <thead>
+              <tr>
+                <th>Domain</th>
+                <th>Requests</th>
+                <th>Last Seen</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="recent-websites-tbody"></tbody>
+          </table>
+          <div id="overview-empty" class="empty-msg" style="display:none;">
+            <p>No websites tracked yet. Start browsing with the extension enabled!</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- WEBSITES PAGE -->
+    <!-- ============================================================ -->
+    <section id="page-websites" class="page">
+      <div class="page-toolbar">
+        <div class="search-box">
+          <span>🔍</span>
+          <input type="text" id="website-search" placeholder="Filter domains..." autocomplete="off">
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <table class="data-table" id="websites-table">
+            <thead>
+              <tr>
+                <th>Domain</th>
+                <th>GET</th>
+                <th>POST</th>
+                <th>Errors</th>
+                <th>Redirects</th>
+                <th>Total</th>
+                <th>Last Seen</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="websites-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- ALL REQUESTS PAGE -->
+    <!-- ============================================================ -->
+    <section id="page-requests" class="page">
+      <div class="page-toolbar">
+        <div class="filter-bar-admin">
+          <select id="req-filter-method">
+            <option value="">All Methods</option>
+            <option value="GET">GET</option>
+            <option value="POST">POST</option>
+            <option value="PUT">PUT</option>
+            <option value="DELETE">DELETE</option>
+          </select>
+          <select id="req-filter-status">
+            <option value="">All Status</option>
+            <option value="2xx">2xx Success</option>
+            <option value="3xx">3xx Redirect</option>
+            <option value="4xx">4xx Client Error</option>
+            <option value="5xx">5xx Server Error</option>
+          </select>
+          <select id="req-filter-website">
+            <option value="">All Websites</option>
+          </select>
+          <input type="text" id="req-filter-search" placeholder="Search URL...">
+          <button id="req-filter-apply" class="btn-sm">Apply</button>
+          <button id="req-filter-clear" class="btn-sm btn-ghost">Clear</button>
+          <div style="margin-left:auto; display:flex; gap:6px;">
+            <button id="btn-export-postman" class="btn-sm" title="Export filtered requests as Postman Collection">📮 Export Postman</button>
+            <button id="btn-export-json" class="btn-sm" title="Export as JSON">📄 Export JSON</button>
+            <button id="btn-export-curl" class="btn-sm" title="Export as cURL commands">💻 Export cURL</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <table class="data-table" id="requests-table">
+            <thead>
+              <tr>
+                <th style="width: 50px;">#</th>
+                <th style="width: 70px;">Method</th>
+                <th>URL</th>
+                <th style="width: 60px;">Status</th>
+                <th style="width: 70px;">Type</th>
+                <th style="width: 70px;">Time</th>
+                <th style="width: 70px;">Domain</th>
+                <th style="width: 140px;">Captured</th>
+                <th style="width: 80px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="requests-tbody"></tbody>
+          </table>
+        </div>
+        <div class="card-footer">
+          <div class="pagination" id="requests-pagination"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- REDIRECTS PAGE -->
+    <!-- ============================================================ -->
+    <section id="page-redirects" class="page">
+      <div class="card">
+        <div class="card-header">
+          <h3>Redirect Chains</h3>
+        </div>
+        <div class="card-body" id="redirects-container"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- REQUEST DETAIL MODAL -->
+    <!-- ============================================================ -->
+    <div id="detail-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="modal-title">Request Detail</h3>
+          <button class="modal-close" id="modal-close">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-tabs">
+            <button class="modal-tab active" data-tab="m-general">General</button>
+            <button class="modal-tab" data-tab="m-headers">Headers</button>
+            <button class="modal-tab" data-tab="m-payload">Payload</button>
+            <button class="modal-tab" data-tab="m-response">Response</button>
+          </div>
+          <div class="modal-tab-content">
+            <div id="m-general" class="m-tab-pane active">
+              <table class="detail-table" id="modal-general-table"></table>
+            </div>
+            <div id="m-headers" class="m-tab-pane">
+              <h4>Request Headers</h4>
+              <table class="detail-table" id="modal-req-headers"></table>
+              <h4 style="margin-top:16px;">Response Headers</h4>
+              <table class="detail-table" id="modal-res-headers"></table>
+            </div>
+            <div id="m-payload" class="m-tab-pane">
+              <pre class="code-block" id="modal-payload"></pre>
+            </div>
+            <div id="m-response" class="m-tab-pane">
+              <pre class="code-block" id="modal-response"></pre>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-sm" id="modal-export-postman">📮 Postman</button>
+          <button class="btn-sm" id="modal-copy-curl">📋 Copy cURL</button>
+          <button class="btn-sm" id="modal-copy-json">📄 Copy JSON</button>
+          <button class="btn-sm btn-danger" id="modal-delete">🗑️ Delete</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

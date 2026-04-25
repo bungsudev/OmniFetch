@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HTTP Tracker Pro</title>
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body>
+  <!-- ================================================================== -->
+  <!-- TOP TOOLBAR -->
+  <!-- ================================================================== -->
+  <div id="toolbar">
+    <div class="toolbar-left">
+      <div class="logo">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text">HTTP Tracker</span>
+      </div>
+      <div class="toolbar-divider"></div>
+      <button id="btn-clear" class="toolbar-btn" title="Clear all requests">
+        <span class="btn-icon">🗑️</span>
+        <span class="btn-label">Clear</span>
+      </button>
+      <button id="btn-toggle-record" class="toolbar-btn active" title="Toggle recording">
+        <span class="btn-icon record-dot">●</span>
+        <span class="btn-label">Recording</span>
+      </button>
+      <button id="btn-preserve-log" class="toolbar-btn" title="Preserve log on navigation">
+        <span class="btn-icon">📌</span>
+        <span class="btn-label">Preserve</span>
+      </button>
+    </div>
+    <div class="toolbar-center">
+      <div class="search-container">
+        <span class="search-icon">🔍</span>
+        <input id="search-input" type="text" placeholder="Filter by URL, method, or keyword..." autocomplete="off">
+        <button id="search-clear" class="search-clear-btn" style="display:none;">✕</button>
+      </div>
+    </div>
+    <div class="toolbar-right">
+      <div class="view-tabs">
+        <button class="view-tab active" data-view="requests" title="All Requests">
+          <span>📋</span> Requests
+        </button>
+        <button class="view-tab" data-view="redirects" title="Redirect Chains">
+          <span>🔗</span> Redirects
+        </button>
+        <button class="view-tab" data-view="timeline" title="Timeline View">
+          <span>📊</span> Timeline
+        </button>
+      </div>
+      <div class="toolbar-divider"></div>
+      <div class="export-dropdown">
+        <button id="btn-export" class="toolbar-btn" title="Export data">
+          <span class="btn-icon">📤</span>
+          <span class="btn-label">Export</span>
+        </button>
+        <div id="export-menu" class="dropdown-menu">
+          <button data-export="json">Export as JSON</button>
+          <button data-export="curl">Export as cURL</button>
+          <button data-export="postman">Export as Postman Collection</button>
+          <button data-export="redirects">Export Redirect Chains</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================== -->
+  <!-- FILTER BAR -->
+  <!-- ================================================================== -->
+  <div id="filter-bar">
+    <div class="filter-group">
+      <label>Method:</label>
+      <div class="filter-pills" id="method-filters">
+        <button class="filter-pill active" data-method="all">All</button>
+        <button class="filter-pill method-get" data-method="GET">GET</button>
+        <button class="filter-pill method-post" data-method="POST">POST</button>
+        <button class="filter-pill method-put" data-method="PUT">PUT</button>
+        <button class="filter-pill method-delete" data-method="DELETE">DELETE</button>
+        <button class="filter-pill method-options" data-method="OPTIONS">OPT</button>
+        <button class="filter-pill method-other" data-method="OTHER">Other</button>
+      </div>
+    </div>
+    <div class="filter-group">
+      <label>Status:</label>
+      <div class="filter-pills" id="status-filters">
+        <button class="filter-pill active" data-status="all">All</button>
+        <button class="filter-pill status-success" data-status="2xx">2xx</button>
+        <button class="filter-pill status-redirect" data-status="3xx">3xx</button>
+        <button class="filter-pill status-client-error" data-status="4xx">4xx</button>
+        <button class="filter-pill status-server-error" data-status="5xx">5xx</button>
+      </div>
+    </div>
+    <div class="filter-group">
+      <label>Type:</label>
+      <div class="filter-pills" id="type-filters">
+        <button class="filter-pill active" data-type="all">All</button>
+        <button class="filter-pill" data-type="xmlhttprequest">XHR</button>
+        <button class="filter-pill" data-type="fetch">Fetch</button>
+        <button class="filter-pill" data-type="document">Doc</button>
+        <button class="filter-pill" data-type="script">JS</button>
+        <button class="filter-pill" data-type="stylesheet">CSS</button>
+        <button class="filter-pill" data-type="image">Img</button>
+        <button class="filter-pill" data-type="js-redirect">JS↪</button>
+      </div>
+    </div>
+    <div class="filter-group filter-domain">
+      <label>Domain:</label>
+      <input id="domain-filter" type="text" placeholder="e.g. api.example.com" autocomplete="off">
+    </div>
+    <div class="request-count">
+      <span id="request-count-value">0</span> requests
+    </div>
+  </div>
+
+  <!-- ================================================================== -->
+  <!-- MAIN CONTENT -->
+  <!-- ================================================================== -->
+  <div id="main-content">
+    <!-- REQUEST LIST VIEW -->
+    <div id="view-requests" class="view active">
+      <div id="request-table-container">
+        <table id="request-table">
+          <thead>
+            <tr>
+              <th class="col-status" data-sort="statusCode">#</th>
+              <th class="col-method" data-sort="method">Method</th>
+              <th class="col-url" data-sort="url">URL</th>
+              <th class="col-type" data-sort="type">Type</th>
+              <th class="col-size" data-sort="size">Size</th>
+              <th class="col-time" data-sort="duration">Time</th>
+              <th class="col-waterfall">Waterfall</th>
+            </tr>
+          </thead>
+          <tbody id="request-tbody">
+          </tbody>
+        </table>
+        <div id="empty-state" class="empty-state">
+          <div class="empty-icon">📡</div>
+          <h3>No requests captured yet</h3>
+          <p>Navigate to a webpage or interact with the current page to see network requests.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- REDIRECT CHAINS VIEW -->
+    <div id="view-redirects" class="view">
+      <div id="redirect-chains-container">
+        <div id="redirect-chains-list"></div>
+        <div id="redirect-empty" class="empty-state">
+          <div class="empty-icon">🔗</div>
+          <h3>No redirect chains detected</h3>
+          <p>Redirect chains (HTTP 3xx, JS redirects, meta refreshes) will appear here.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- TIMELINE VIEW -->
+    <div id="view-timeline" class="view">
+      <div id="timeline-container">
+        <div id="timeline-canvas-wrapper">
+          <canvas id="timeline-canvas"></canvas>
+        </div>
+        <div id="timeline-empty" class="empty-state">
+          <div class="empty-icon">📊</div>
+          <h3>No data for timeline</h3>
+          <p>Capture some requests to see the timeline visualization.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================== -->
+  <!-- DETAIL PANEL (RIGHT SIDE) -->
+  <!-- ================================================================== -->
+  <div id="detail-panel" class="hidden">
+    <div id="detail-header">
+      <div id="detail-title">
+        <span id="detail-method" class="detail-method"></span>
+        <span id="detail-url" class="detail-url"></span>
+      </div>
+      <button id="detail-close" class="detail-close-btn" title="Close details">✕</button>
+    </div>
+    <div id="detail-tabs">
+      <button class="detail-tab active" data-tab="headers">Headers</button>
+      <button class="detail-tab" data-tab="payload">Payload</button>
+      <button class="detail-tab" data-tab="response">Response</button>
+      <button class="detail-tab" data-tab="cookies">Cookies</button>
+      <button class="detail-tab" data-tab="session">Session</button>
+      <button class="detail-tab" data-tab="timing">Timing</button>
+    </div>
+    <div id="detail-content">
+      <!-- Headers Tab -->
+      <div id="tab-headers" class="detail-tab-content active">
+        <div class="detail-section">
+          <h4 class="section-header collapsible" data-target="general-info">
+            <span class="collapse-arrow">▼</span> General
+          </h4>
+          <div id="general-info" class="section-body">
+            <table class="info-table" id="general-info-table"></table>
+          </div>
+        </div>
+        <div class="detail-section">
+          <h4 class="section-header collapsible" data-target="request-headers-info">
+            <span class="collapse-arrow">▼</span> Request Headers
+          </h4>
+          <div id="request-headers-info" class="section-body">
+            <table class="info-table" id="request-headers-table"></table>
+          </div>
+        </div>
+        <div class="detail-section">
+          <h4 class="section-header collapsible" data-target="response-headers-info">
+            <span class="collapse-arrow">▼</span> Response Headers
+          </h4>
+          <div id="response-headers-info" class="section-body">
+            <table class="info-table" id="response-headers-table"></table>
+          </div>
+        </div>
+      </div>
+      <!-- Payload Tab -->
+      <div id="tab-payload" class="detail-tab-content">
+        <div class="detail-section">
+          <h4 class="section-header">
+            <span class="collapse-arrow">▼</span> Request Body
+          </h4>
+          <div id="payload-content" class="section-body code-block"></div>
+        </div>
+        <div class="detail-section">
+          <h4 class="section-header">
+            <span class="collapse-arrow">▼</span> Query Parameters
+          </h4>
+          <div id="query-params-content" class="section-body">
+            <table class="info-table" id="query-params-table"></table>
+          </div>
+        </div>
+      </div>
+      <!-- Response Tab -->
+      <div id="tab-response" class="detail-tab-content">
+        <div id="response-content" class="code-block"></div>
+      </div>
+      <!-- Cookies Tab -->
+      <div id="tab-cookies" class="detail-tab-content">
+        <div class="detail-section">
+          <h4 class="section-header">Request Cookies</h4>
+          <table class="info-table" id="request-cookies-table"></table>
+        </div>
+        <div class="detail-section">
+          <h4 class="section-header">Response Set-Cookie</h4>
+          <div id="set-cookie-list"></div>
+        </div>
+      </div>
+      <!-- Session Tab -->
+      <div id="tab-session" class="detail-tab-content">
+        <div class="detail-section">
+          <h4 class="section-header">Authentication</h4>
+          <div id="auth-info" class="section-body"></div>
+        </div>
+        <div class="detail-section">
+          <h4 class="section-header">JWT Decoded</h4>
+          <div id="jwt-info" class="section-body code-block"></div>
+        </div>
+        <div class="detail-section copy-section">
+          <button id="btn-copy-session" class="action-btn">📋 Copy Session Info</button>
+          <button id="btn-copy-curl" class="action-btn">📝 Copy as cURL</button>
+        </div>
+      </div>
+      <!-- Timing Tab -->
+      <div id="tab-timing" class="detail-tab-content">
+        <div id="timing-info" class="section-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================== -->
+  <!-- RESIZE HANDLE -->
+  <!-- ================================================================== -->
+  <div id="resize-handle" class="hidden"></div>
+
+  <!-- ================================================================== -->
+  <!-- TOAST NOTIFICATIONS -->
+  <!-- ================================================================== -->
+  <div id="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="utils/request-formatter.js"></script>
+  <script src="utils/export.js"></script>
+  <script src="panel.js"></script>
+</body>
+</html>

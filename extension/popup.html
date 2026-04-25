@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HTTP Tracker Pro</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 320px;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .popup-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px;
+      border-bottom: 1px solid #21262d;
+      background: linear-gradient(135deg, #0d1117, #161b22);
+    }
+
+    .popup-logo {
+      font-size: 24px;
+      filter: drop-shadow(0 0 6px rgba(88,166,255,.5));
+    }
+
+    .popup-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #f0f3f6;
+    }
+
+    .popup-title span {
+      color: #58a6ff;
+    }
+
+    .popup-version {
+      font-size: 10px;
+      color: #484f58;
+      margin-left: auto;
+      background: #21262d;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    /* ============ MAIN SECTION ============ */
+
+    .popup-body {
+      padding: 16px;
+    }
+
+    /* Toggle */
+    .toggle-section {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: #161b22;
+      border: 1px solid #21262d;
+      border-radius: 10px;
+      margin-bottom: 12px;
+    }
+
+    .toggle-label {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .toggle-label .label-main {
+      font-size: 13px;
+      font-weight: 600;
+      color: #f0f3f6;
+    }
+
+    .toggle-label .label-sub {
+      font-size: 11px;
+      color: #484f58;
+    }
+
+    .toggle-label .label-sub.active {
+      color: #3fb950;
+    }
+
+    .toggle-label .label-sub.inactive {
+      color: #f85149;
+    }
+
+    /* Toggle Switch */
+    .toggle-switch {
+      position: relative;
+      width: 48px;
+      height: 26px;
+      cursor: pointer;
+    }
+
+    .toggle-switch input {
+      display: none;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: #30363d;
+      border-radius: 26px;
+      transition: all 250ms ease;
+    }
+
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      left: 3px;
+      top: 3px;
+      background: #8b949e;
+      border-radius: 50%;
+      transition: all 250ms ease;
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+      background: #238636;
+      box-shadow: 0 0 12px rgba(63,185,80,.3);
+    }
+
+    .toggle-switch input:checked + .toggle-slider::before {
+      transform: translateX(22px);
+      background: #ffffff;
+    }
+
+    /* Stats Row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .stat-box {
+      padding: 10px 12px;
+      background: #161b22;
+      border: 1px solid #21262d;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .stat-box .stat-num {
+      font-size: 20px;
+      font-weight: 800;
+      color: #f0f3f6;
+      line-height: 1.2;
+    }
+
+    .stat-box .stat-lbl {
+      font-size: 10px;
+      color: #484f58;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    .stat-box.blue .stat-num { color: #58a6ff; }
+    .stat-box.green .stat-num { color: #3fb950; }
+
+    /* Links */
+    .popup-links {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .popup-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      color: #c9d1d9;
+      font-size: 12px;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      transition: background 150ms;
+    }
+
+    .popup-link:hover {
+      background: #1c2128;
+    }
+
+    .popup-link .link-icon {
+      font-size: 14px;
+      width: 20px;
+      text-align: center;
+    }
+
+    .popup-link .link-arrow {
+      margin-left: auto;
+      color: #30363d;
+      font-size: 12px;
+    }
+
+    /* Footer */
+    .popup-footer {
+      padding: 10px 16px;
+      border-top: 1px solid #21262d;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .popup-footer span {
+      font-size: 10px;
+      color: #30363d;
+    }
+
+    /* Status indicator */
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 4px;
+    }
+
+    .status-dot.on {
+      background: #3fb950;
+      box-shadow: 0 0 6px rgba(63,185,80,.5);
+    }
+
+    .status-dot.off {
+      background: #f85149;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="popup-header">
+    <span class="popup-logo">⚡</span>
+    <div class="popup-title">HTTP Tracker <span>Pro</span></div>
+    <span class="popup-version">v1.0.0</span>
+  </div>
+
+  <div class="popup-body">
+    <!-- Toggle -->
+    <div class="toggle-section">
+      <div class="toggle-label">
+        <div class="label-main">
+          <span class="status-dot on" id="status-dot"></span>
+          <span id="status-text">Tracking Active</span>
+        </div>
+        <div class="label-sub active" id="status-sub">Capturing all HTTP requests</div>
+      </div>
+      <label class="toggle-switch" id="toggle">
+        <input type="checkbox" id="toggle-input" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-box blue">
+        <div class="stat-num" id="stat-requests">0</div>
+        <div class="stat-lbl">Requests</div>
+      </div>
+      <div class="stat-box green">
+        <div class="stat-num" id="stat-tab">0</div>
+        <div class="stat-lbl">This Tab</div>
+      </div>
+    </div>
+
+    <!-- Links -->
+    <div class="popup-links">
+      <button class="popup-link" id="btn-devtools">
+        <span class="link-icon">🔧</span>
+        Open DevTools Panel
+        <span class="link-arrow">›</span>
+      </button>
+      <button class="popup-link" id="btn-admin">
+        <span class="link-icon">📊</span>
+        Open Admin Dashboard
+        <span class="link-arrow">›</span>
+      </button>
+      <button class="popup-link" id="btn-clear">
+        <span class="link-icon">🗑️</span>
+        Clear Current Tab Data
+        <span class="link-arrow">›</span>
+      </button>
+      <button class="popup-link" id="btn-clear-all">
+        <span class="link-icon">💣</span>
+        Clear All Data
+        <span class="link-arrow">›</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="popup-footer">
+    <span>HTTP Tracker Pro</span>
+    <span id="server-status">⏳ Checking server...</span>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
