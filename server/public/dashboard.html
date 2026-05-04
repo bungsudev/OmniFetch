@@ -36,6 +36,10 @@
         <span class="nav-icon">🔗</span>
         <span class="nav-label">Redirects</span>
       </a>
+      <a href="#" class="nav-item" data-page="recordings">
+        <span class="nav-icon">🎬</span>
+        <span class="nav-label">Recordings</span>
+      </a>
     </nav>
 
     <div class="sidebar-footer">
@@ -235,6 +239,41 @@
           <h3>Redirect Chains</h3>
         </div>
         <div class="card-body" id="redirects-container"></div>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- RECORDINGS PAGE -->
+    <!-- ============================================================ -->
+    <section id="page-recordings" class="page">
+      <div class="page-toolbar">
+        <div class="filter-bar-admin">
+          <input type="text" id="rec-search" placeholder="Search recordings...">
+          <button id="btn-clear-recordings" class="btn-sm btn-danger">🗑 Clear All</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <table class="data-table" id="recordings-table">
+            <thead>
+              <tr>
+                <th style="width:40px;">#</th>
+                <th>Name</th>
+                <th style="width:80px;">Actions</th>
+                <th style="width:200px;">Start URL</th>
+                <th style="width:140px;">Created</th>
+                <th style="width:140px;">Controls</th>
+              </tr>
+            </thead>
+            <tbody id="recordings-tbody"></tbody>
+          </table>
+          <div id="recordings-empty" class="empty-state" style="display:none;">
+            <div style="font-size:40px;">🎬</div>
+            <p>No recordings yet</p>
+            <p style="font-size:12px; color:var(--text-5);">Use the extension popup to record browser actions</p>
+          </div>
+        </div>
       </div>
     </section>
 

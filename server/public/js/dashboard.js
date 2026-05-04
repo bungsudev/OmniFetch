@@ -82,6 +82,7 @@
       websites: ['Websites', 'All tracked websites and their request data'],
       requests: ['All Requests', 'Browse and filter all captured HTTP requests'],
       redirects: ['Redirects', 'Redirect chains captured from all websites'],
+      recordings: ['Recordings', 'Automation recordings for replay and export'],
     };
 
     const [title, subtitle] = titles[page] || ['', ''];
@@ -94,6 +95,7 @@
       case 'websites': loadWebsites(); break;
       case 'requests': loadRequests(); break;
       case 'redirects': loadRedirects(); break;
+      case 'recordings': loadRecordings(); break;
     }
   }
 
@@ -942,6 +944,115 @@
       toast.classList.remove('show');
       setTimeout(() => toast.remove(), 300);
     }, 3000);
+  }
+
+  // ====================================================================
+  // RECORDINGS PAGE
+  // ====================================================================
+
+  async function loadRecordings() {
+    const tbody = document.getElementById('recordings-tbody');
+    const emptyEl = document.getElementById('recordings-empty');
+    const tableEl = document.getElementById('recordings-table');
+
+    if (!tbody) return;
+
+    try {
+      const recordings = await api.get('/recordings');
+
+      if (!recordings || recordings.length === 0) {
+        tableEl.style.display = 'none';
+        emptyEl.style.display = 'block';
+        return;
+      }
+
+      tableEl.style.display = '';
+      emptyEl.style.display = 'none';
+
+      // Apply search filter
+      const searchEl = document.getElementById('rec-search');
+      const searchTerm = (searchEl?.value || '').toLowerCase();
+      const filtered = searchTerm
+        ? recordings.filter(r => r.name.toLowerCase().includes(searchTerm) || (r.start_url || '').toLowerCase().includes(searchTerm))
+        : recordings;
+
+      tbody.innerHTML = filtered.map((rec, i) => {
+        const date = new Date(rec.created_at);
+        const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const shortUrl = (rec.start_url || '—').replace(/^https?:\/\//, '').slice(0, 30);
+        return `
+          <tr data-id="${rec.id}">
+            <td style="color:var(--text-5);">${i + 1}</td>
+            <td><strong>${escapeHtml(rec.name)}</strong></td>
+            <td><span class="badge badge-blue">${rec.action_count}</span></td>
+            <td style="font-size:11px; color:var(--text-4);" title="${escapeHtml(rec.start_url || '')}">${escapeHtml(shortUrl)}</td>
+            <td style="font-size:11px; color:var(--text-4);">${dateStr}</td>
+            <td>
+              <div style="display:flex; gap:4px;">
+                <button class="btn-sm btn-icon" title="View JSON" data-rec-view="${rec.id}">👁</button>
+                <button class="btn-sm btn-icon" title="Export Puppeteer" data-rec-export="${rec.id}">📤</button>
+                <button class="btn-sm btn-icon btn-danger" title="Delete" data-rec-delete="${rec.id}">🗑</button>
+              </div>
+            </td>
+          </tr>`;
+      }).join('');
+
+      // Attach events
+      tbody.querySelectorAll('[data-rec-view]').forEach(btn => {
+        btn.addEventListener('click', () => viewRecordingDetail(btn.dataset.recView));
+      });
+      tbody.querySelectorAll('[data-rec-export]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          window.open(`/api/recordings/${btn.dataset.recExport}/export`, '_blank');
+        });
+      });
+      tbody.querySelectorAll('[data-rec-delete]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Delete this recording?')) return;
+          await api.delete(`/recordings/${btn.dataset.recDelete}`);
+          showToast('Recording deleted', 'success');
+          loadRecordings();
+        });
+      });
+    } catch (err) {
+      console.error('[Recordings] Load error:', err);
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-5);">Error loading recordings</td></tr>';
+    }
+  }
+
+  async function viewRecordingDetail(id) {
+    try {
+      const rec = await api.get(`/recordings/${id}`);
+      const json = JSON.stringify(rec.actions, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (err) {
+      showToast('Error loading recording', 'error');
+    }
+  }
+
+  // Recordings search
+  const recSearchEl = document.getElementById('rec-search');
+  if (recSearchEl) {
+    let recSearchTimeout;
+    recSearchEl.addEventListener('input', () => {
+      clearTimeout(recSearchTimeout);
+      recSearchTimeout = setTimeout(() => {
+        if (state.currentPage === 'recordings') loadRecordings();
+      }, 300);
+    });
+  }
+
+  // Clear all recordings
+  const btnClearRecs = document.getElementById('btn-clear-recordings');
+  if (btnClearRecs) {
+    btnClearRecs.addEventListener('click', async () => {
+      if (!confirm('Delete ALL recordings?')) return;
+      await api.delete('/recordings');
+      showToast('All recordings cleared', 'success');
+      loadRecordings();
+    });
   }
 
   // ====================================================================

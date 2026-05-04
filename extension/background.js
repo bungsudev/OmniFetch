@@ -14,7 +14,7 @@ const store = globalThis.__requestStore;
 
 let trackingEnabled = true;
 
-// Recorder state
+// Recorder state — persisted to chrome.storage.local to survive SW restarts
 const recorderState = {
   isRecording: false,
   isPlaying: false,
@@ -25,6 +25,30 @@ const recorderState = {
   startTime: null,
   pendingNavigation: false,
 };
+
+// Restore recorder state on SW startup
+chrome.storage.local.get('_recorderState', (result) => {
+  if (result._recorderState) {
+    Object.assign(recorderState, result._recorderState);
+    if (recorderState.isRecording) {
+      chrome.action.setBadgeText({ text: 'REC' });
+      chrome.action.setBadgeBackgroundColor({ color: '#f85149' });
+    }
+  }
+});
+
+function persistRecorderState() {
+  chrome.storage.local.set({
+    _recorderState: {
+      isRecording: recorderState.isRecording,
+      isPlaying: recorderState.isPlaying,
+      actions: recorderState.actions,
+      tabId: recorderState.tabId,
+      startUrl: recorderState.startUrl,
+      startTime: recorderState.startTime,
+    }
+  });
+}
 
 // Load saved state
 chrome.storage.local.get('trackingEnabled', (result) => {
@@ -446,6 +470,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       recorderState.tabId = message.tabId || null;
       recorderState.startUrl = message.url || '';
       recorderState.startTime = Date.now();
+      persistRecorderState();
       // Inject recorder into the active tab
       if (recorderState.tabId) {
         chrome.tabs.sendMessage(recorderState.tabId, { type: 'INJECT_RECORDER' });
@@ -459,6 +484,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     case 'STOP_RECORDING': {
       recorderState.isRecording = false;
+      persistRecorderState();
       // Tell content script to stop recorder
       if (recorderState.tabId) {
         chrome.tabs.sendMessage(recorderState.tabId, { type: 'STOP_RECORDER' });
@@ -476,13 +502,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // Forward from content.js → recorder.js events
       if (message.event === 'RECORDER_ACTION' && message.action) {
         recorderState.actions.push(message.action);
+        persistRecorderState(); // Save each action immediately
       } else if (message.event === 'RECORDER_STOPPED' && message.actions) {
-        // Merge final actions batch
         recorderState.actions = message.actions;
+        persistRecorderState();
       } else if (message.event === 'RECORDER_BEFOREUNLOAD' && message.actions) {
         recorderState.actions = message.actions;
-        // Add navigation action for the next page
         recorderState.pendingNavigation = true;
+        persistRecorderState();
       }
       sendResponse({ ok: true });
       break;
@@ -501,7 +528,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const recordings = result.recordings || [];
         recordings.unshift(recording);
         chrome.storage.local.set({ recordings }, () => {
+          // Clear recorder state after save
+          recorderState.actions = [];
+          persistRecorderState();
           console.log(`[OmniFetch] 💾 Recording saved: "${recording.name}" (${recording.actionCount} actions)`);
+
+          // Sync to server (fire & forget)
+          fetch(`${BACKEND_URL}/api/recordings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+            body: JSON.stringify(recording),
+          }).then(r => {
+            if (r.ok) console.log('[OmniFetch] 📡 Recording synced to server');
+          }).catch(() => { /* offline — OK */ });
+
           sendResponse({ ok: true, recording });
         });
       });

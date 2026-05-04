@@ -123,6 +123,21 @@ CREATE TABLE redirect_steps (
 CREATE INDEX idx_steps_chain ON redirect_steps(chain_id);
 
 -- ============================================================================
+-- RECORDINGS (automation recorder)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS recordings (
+  id            SERIAL PRIMARY KEY,
+  ext_id        VARCHAR(255) UNIQUE,
+  name          VARCHAR(512) NOT NULL,
+  actions       JSONB DEFAULT '[]',
+  start_url     TEXT,
+  action_count  INTEGER DEFAULT 0,
+  created_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_recordings_created ON recordings(created_at DESC);
+
+-- ============================================================================
 -- VIEWS FOR COMMON QUERIES
 -- ============================================================================
 

@@ -45,6 +45,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/requests', require('./routes/requests'));
 app.use('/api/websites', require('./routes/websites'));
 app.use('/api/redirects', require('./routes/redirects'));
+app.use('/api/recordings', require('./routes/recordings'));
 
 // Health check
 app.get('/api/health', (req, res) => {
