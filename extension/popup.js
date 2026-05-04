@@ -172,21 +172,29 @@
 
   btnRecord.addEventListener('click', async () => {
     if (isRecording) {
-      // Stop recording
-      const result = await chrome.runtime.sendMessage({ type: 'STOP_RECORDING' });
+      // Stop recording — wait briefly for final actions to arrive
+      await chrome.runtime.sendMessage({ type: 'STOP_RECORDING' });
       setRecordingUI(false);
 
-      if (result.actions && result.actions.length > 0) {
-        // Prompt for name
-        const name = prompt('Name this recording:', `Recording ${new Date().toLocaleTimeString()}`);
+      // Small delay to let recorder's final RECORDER_STOPPED event be processed
+      await new Promise(r => setTimeout(r, 500));
+
+      // Get the accumulated actions from background
+      const state = await chrome.runtime.sendMessage({ type: 'GET_RECORDER_STATE' });
+      const actionCount = state.actionCount || 0;
+
+      if (actionCount > 0) {
+        const name = prompt(`Save recording? (${actionCount} actions)`, `Recording ${new Date().toLocaleTimeString()}`);
         if (name !== null) {
           await chrome.runtime.sendMessage({
             type: 'SAVE_RECORDING',
             name: name || `Recording ${new Date().toLocaleTimeString()}`,
           });
-          loadRecordings();
         }
       }
+
+      // Always refresh list (re-enables Play button)
+      loadRecordings();
     } else {
       // Start recording
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -230,6 +238,7 @@
       btnRecord.innerHTML = '<span>🔴</span> Record';
       btnRecord.classList.remove('recording');
       recCounter.style.display = 'none';
+      btnPlayLast.disabled = false;
       if (actionCountInterval) {
         clearInterval(actionCountInterval);
         actionCountInterval = null;
