@@ -24,12 +24,27 @@
     script.onload = () => script.remove();
   }
 
-  // Inject as early as possible
-  injectPageScript();
+  // Only inject when tracking is enabled
+  chrome.storage.local.get('trackingEnabled', (result) => {
+    if (result.trackingEnabled !== false) { // Default: enabled
+      injectPageScript();
+    }
+  });
 
   // ========================================================================
   // LISTEN FOR MESSAGES FROM INJECTED SCRIPT
   // ========================================================================
+
+  // Safe wrapper — suppresses "Extension context invalidated" errors
+  // that occur when extension is reloaded but old content scripts remain
+  function safeSend(msg) {
+    try {
+      if (!chrome.runtime?.id) return; // Extension context gone
+      chrome.runtime.sendMessage(msg);
+    } catch {
+      // Extension was reloaded — this content script is orphaned, ignore
+    }
+  }
 
   window.addEventListener('message', (event) => {
     if (event.source !== window) return;
@@ -39,7 +54,7 @@
 
     switch (msg.type) {
       case 'JS_REDIRECT':
-        chrome.runtime.sendMessage({
+        safeSend({
           type: 'JS_REDIRECT',
           method: msg.method,
           from: msg.from,
@@ -49,7 +64,7 @@
         break;
 
       case 'FETCH_INTERCEPT':
-        chrome.runtime.sendMessage({
+        safeSend({
           type: 'FETCH_INTERCEPT',
           url: msg.url,
           method: msg.method,
@@ -64,7 +79,7 @@
         break;
 
       case 'META_REDIRECT':
-        chrome.runtime.sendMessage({
+        safeSend({
           type: 'META_REDIRECT',
           from: msg.from,
           to: msg.to,
@@ -74,7 +89,7 @@
         break;
 
       case 'FORM_SUBMIT':
-        chrome.runtime.sendMessage({
+        safeSend({
           type: 'FORM_SUBMIT',
           url: msg.url,
           method: msg.method,
@@ -106,7 +121,7 @@
         const delay = parseInt(match[1], 10);
         const url = match[2];
 
-        chrome.runtime.sendMessage({
+        safeSend({
           type: 'META_REDIRECT',
           from: window.location.href,
           to: url,
@@ -199,7 +214,7 @@
 
     // Recorder messages
     if (event.data.source === '__OMNIFETCH_RECORDER__') {
-      chrome.runtime.sendMessage({
+      safeSend({
         type: 'RECORDER_EVENT',
         event: event.data.type,
         action: event.data.action || null,
@@ -212,7 +227,7 @@
 
     // Player messages
     if (event.data.source === '__OMNIFETCH_PLAYER__') {
-      chrome.runtime.sendMessage({
+      safeSend({
         type: 'PLAYER_EVENT',
         event: event.data.type,
         step: event.data.step || 0,
