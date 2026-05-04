@@ -1,5 +1,5 @@
 /**
- * HTTP Tracker Pro - Backend Server
+ * OmniFetch by BungsuDev - Backend Server
  * Express API + Admin Panel + PostgreSQL
  */
 
@@ -160,7 +160,7 @@ async function start() {
 
   app.listen(PORT, () => {
     console.log('');
-    console.log('  ⚡ HTTP Tracker Pro — Server');
+    console.log('  ⚡ OmniFetch by BungsuDev — Server');
     console.log('  ════════════════════════════════════');
     console.log(`  🌐 Admin Panel:  http://localhost:${PORT}`);
     console.log(`  📡 API Base:     http://localhost:${PORT}/api`);

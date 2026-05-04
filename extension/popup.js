@@ -125,7 +125,7 @@
         chrome.scripting.executeScript({
           target: { tabId: tabs[0].id },
           func: () => {
-            alert('Press F12 or Cmd+Opt+I to open DevTools, then click the "HTTP Tracker" tab.');
+            alert('Press F12 or Cmd+Opt+I to open DevTools, then click the "OmniFetch" tab.');
           }
         });
       }

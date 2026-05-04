@@ -745,7 +745,7 @@
     return {
       info: {
         name: name || `HTTP Tracker Export - ${new Date().toISOString().slice(0, 16)}`,
-        description: `Exported ${requests.length} requests from HTTP Tracker Pro`,
+        description: `Exported ${requests.length} requests from OmniFetch by BungsuDev`,
         schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
       },
       item: folders.length === 1 ? folders[0].item : folders,
@@ -881,7 +881,7 @@
       const requests = await fetchAllFilteredRequests();
       if (requests.length === 0) { showToast('No requests to export'); return; }
       const curlCommands = requests.map(r => buildCurl(r)).join('\n\n# ─────────────────────────\n\n');
-      const header = `#!/bin/bash\n# HTTP Tracker Pro - cURL Export\n# ${requests.length} requests exported at ${new Date().toISOString()}\n\n`;
+      const header = `#!/bin/bash\n# OmniFetch by BungsuDev - cURL Export\n# ${requests.length} requests exported at ${new Date().toISOString()}\n\n`;
       downloadFile('http_tracker_requests.sh', header + curlCommands);
       showToast(`Exported ${requests.length} requests as cURL`);
     } catch (err) {

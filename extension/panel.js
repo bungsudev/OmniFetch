@@ -1231,7 +1231,7 @@
       }
 
       case 'postman': {
-        const collection = ExportUtils.toPostmanCollection(requests, `HTTP Tracker - ${timestamp}`);
+        const collection = ExportUtils.toPostmanCollection(requests, `OmniFetch - ${timestamp}`);
         ExportUtils.downloadFile(collection, `http-tracker-${timestamp}.postman_collection.json`);
         showToast(`Exported as Postman Collection`, 'success');
         break;

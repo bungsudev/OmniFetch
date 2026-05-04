@@ -359,7 +359,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         },
       });
       queueForSync(formEntry);
-      console.log(`[HTTP Tracker Pro] 📝 Form submit captured: ${message.method} ${message.url} (${message.fieldCount} fields)`);
+      console.log(`[OmniFetch] 📝 Form submit captured: ${message.method} ${message.url} (${message.fieldCount} fields)`);
       sendResponse({ ok: true });
       break;
     }
@@ -415,7 +415,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     case 'SET_TRACKING': {
       trackingEnabled = message.enabled;
       chrome.storage.local.set({ trackingEnabled: message.enabled });
-      console.log(`[HTTP Tracker Pro] Tracking ${message.enabled ? 'ENABLED' : 'DISABLED'}`);
+      console.log(`[OmniFetch] Tracking ${message.enabled ? 'ENABLED' : 'DISABLED'}`);
       sendResponse({ ok: true, enabled: message.enabled });
       break;
     }

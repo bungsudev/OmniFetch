@@ -71,11 +71,11 @@ const ExportUtils = {
   /**
    * Export as Postman Collection v2.1
    */
-  toPostmanCollection(requests, collectionName = 'HTTP Tracker Export') {
+  toPostmanCollection(requests, collectionName = 'OmniFetch Export') {
     const collection = {
       info: {
         name: collectionName,
-        description: `Exported from HTTP Tracker Pro on ${new Date().toISOString()}`,
+        description: `Exported from OmniFetch by BungsuDev on ${new Date().toISOString()}`,
         schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
       },
       item: [],

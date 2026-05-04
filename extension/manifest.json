@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "HTTP Tracker Pro",
-  "version": "1.0.0",
-  "description": "Track, log, and visualize ALL HTTP requests and redirect chains including JavaScript-based redirects.",
+  "name": "OmniFetch by BungsuDev",
+  "version": "2.0.0",
+  "description": "Intercept, record, and automate HTTP requests with smart redirect tracking and browser automation recorder.",
   "permissions": [
     "webRequest",
     "webNavigation",
@@ -34,7 +34,7 @@
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     },
-    "default_title": "HTTP Tracker Pro"
+    "default_title": "OmniFetch by BungsuDev"
   },
   "devtools_page": "devtools.html",
   "icons": {

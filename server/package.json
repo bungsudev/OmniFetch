@@ -1,7 +1,7 @@
 {
   "name": "http-tracker-server",
   "version": "1.0.0",
-  "description": "Backend API and Admin Panel for HTTP Tracker Pro",
+  "description": "Backend API and Admin Panel for OmniFetch by BungsuDev",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
