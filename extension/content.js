@@ -146,4 +146,84 @@
     childList: true,
     subtree: true,
   });
+
+  // ========================================================================
+  // RECORDER & PLAYER INJECTION
+  // ========================================================================
+
+  function injectScript(filename) {
+    const script = document.createElement('script');
+    script.src = chrome.runtime.getURL(filename);
+    (document.head || document.documentElement).appendChild(script);
+    script.onload = () => script.remove();
+  }
+
+  // Listen for commands from background.js
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    switch (message.type) {
+      case 'INJECT_RECORDER':
+        injectScript('recorder.js');
+        sendResponse({ ok: true });
+        break;
+
+      case 'STOP_RECORDER':
+        window.postMessage({ source: '__OMNIFETCH_RECORDER_CONTROL__', command: 'STOP' }, '*');
+        sendResponse({ ok: true });
+        break;
+
+      case 'INJECT_PLAYER':
+        injectScript('player.js');
+        // Wait briefly for player to load, then send play command
+        setTimeout(() => {
+          window.postMessage({
+            source: '__OMNIFETCH_PLAYER_CONTROL__',
+            command: 'PLAY',
+            actions: message.actions,
+            speed: message.speed || 1,
+          }, '*');
+        }, 300);
+        sendResponse({ ok: true });
+        break;
+
+      case 'STOP_PLAYER':
+        window.postMessage({ source: '__OMNIFETCH_PLAYER_CONTROL__', command: 'STOP' }, '*');
+        sendResponse({ ok: true });
+        break;
+    }
+    return true;
+  });
+
+  // Forward recorder/player messages from page context to background
+  window.addEventListener('message', (event) => {
+    if (event.source !== window || !event.data) return;
+
+    // Recorder messages
+    if (event.data.source === '__OMNIFETCH_RECORDER__') {
+      chrome.runtime.sendMessage({
+        type: 'RECORDER_EVENT',
+        event: event.data.type,
+        action: event.data.action || null,
+        actions: event.data.actions || null,
+        actionCount: event.data.actionCount || 0,
+        totalActions: event.data.totalActions || 0,
+        url: event.data.url || null,
+      });
+    }
+
+    // Player messages
+    if (event.data.source === '__OMNIFETCH_PLAYER__') {
+      chrome.runtime.sendMessage({
+        type: 'PLAYER_EVENT',
+        event: event.data.type,
+        step: event.data.step || 0,
+        total: event.data.total || 0,
+        action: event.data.action || null,
+        selector: event.data.selector || null,
+        text: event.data.text || null,
+        error: event.data.error || null,
+        reason: event.data.reason || null,
+        isPlaying: event.data.isPlaying || false,
+      });
+    }
+  });
 })();

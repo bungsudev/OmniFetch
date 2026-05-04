@@ -44,7 +44,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["injected.js"],
+      "resources": ["injected.js", "recorder.js", "player.js"],
       "matches": ["<all_urls>"]
     }
   ]

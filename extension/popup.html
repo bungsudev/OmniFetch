@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HTTP Tracker Pro</title>
+  <title>OmniFetch Pro</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -238,14 +238,170 @@
     .status-dot.off {
       background: #f85149;
     }
+
+    /* ============ RECORDER SECTION ============ */
+
+    .recorder-section {
+      margin-bottom: 12px;
+    }
+
+    .recorder-section .section-title {
+      font-size: 10px;
+      color: #484f58;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 8px;
+      padding: 0 4px;
+    }
+
+    .recorder-controls {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .rec-btn {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #21262d;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 200ms;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .rec-btn-record {
+      background: rgba(248,81,73,.1);
+      color: #f85149;
+      border-color: rgba(248,81,73,.3);
+    }
+    .rec-btn-record:hover { background: rgba(248,81,73,.2); }
+    .rec-btn-record.recording {
+      background: #f85149;
+      color: #fff;
+      animation: rec-pulse 1.5s infinite;
+    }
+
+    .rec-btn-play {
+      background: rgba(63,185,80,.1);
+      color: #3fb950;
+      border-color: rgba(63,185,80,.3);
+    }
+    .rec-btn-play:hover { background: rgba(63,185,80,.2); }
+    .rec-btn-play.playing {
+      background: #3fb950;
+      color: #fff;
+    }
+
+    .rec-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    @keyframes rec-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(248,81,73,.4); }
+      50% { box-shadow: 0 0 0 6px rgba(248,81,73,0); }
+    }
+
+    .rec-counter {
+      text-align: center;
+      font-size: 11px;
+      color: #484f58;
+      margin-bottom: 8px;
+    }
+    .rec-counter strong {
+      color: #f85149;
+    }
+
+    .rec-list {
+      max-height: 160px;
+      overflow-y: auto;
+    }
+
+    .rec-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      transition: background 150ms;
+    }
+    .rec-item:hover { background: #1c2128; }
+
+    .rec-item-name {
+      flex: 1;
+      color: #c9d1d9;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .rec-item-count {
+      color: #484f58;
+      font-size: 10px;
+    }
+
+    .rec-item-actions {
+      display: flex;
+      gap: 2px;
+    }
+
+    .rec-action-btn {
+      width: 22px;
+      height: 22px;
+      border: none;
+      background: none;
+      color: #8b949e;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 150ms;
+    }
+    .rec-action-btn:hover {
+      background: #21262d;
+      color: #f0f3f6;
+    }
+
+    .speed-select {
+      background: #161b22;
+      border: 1px solid #21262d;
+      border-radius: 6px;
+      color: #c9d1d9;
+      font-size: 11px;
+      padding: 4px 6px;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .rec-empty {
+      text-align: center;
+      color: #30363d;
+      font-size: 11px;
+      padding: 12px;
+    }
+
+    .rec-divider {
+      height: 1px;
+      background: #21262d;
+      margin: 12px 0;
+    }
   </style>
 </head>
 <body>
 
   <div class="popup-header">
     <span class="popup-logo">⚡</span>
-    <div class="popup-title">HTTP Tracker <span>Pro</span></div>
-    <span class="popup-version">v1.0.0</span>
+    <div class="popup-title">OmniFetch <span>Pro</span></div>
+    <span class="popup-version">v2.0.0</span>
   </div>
 
   <div class="popup-body">
@@ -276,6 +432,31 @@
       </div>
     </div>
 
+    <!-- Recorder -->
+    <div class="rec-divider"></div>
+    <div class="recorder-section">
+      <div class="section-title">🎬 Automation Recorder</div>
+      <div class="recorder-controls">
+        <button class="rec-btn rec-btn-record" id="btn-record">
+          <span>🔴</span> Record
+        </button>
+        <button class="rec-btn rec-btn-play" id="btn-play-last" disabled>
+          <span>▶</span> Play Last
+        </button>
+        <select class="speed-select" id="playback-speed" title="Playback speed">
+          <option value="0.5">0.5x</option>
+          <option value="1" selected>1x</option>
+          <option value="2">2x</option>
+          <option value="5">5x</option>
+        </select>
+      </div>
+      <div class="rec-counter" id="rec-counter" style="display:none;">
+        🔴 Recording: <strong id="rec-action-count">0</strong> actions captured
+      </div>
+      <div class="rec-list" id="rec-list"></div>
+    </div>
+    <div class="rec-divider"></div>
+
     <!-- Links -->
     <div class="popup-links">
       <button class="popup-link" id="btn-devtools">
@@ -302,7 +483,7 @@
   </div>
 
   <div class="popup-footer">
-    <span>HTTP Tracker Pro</span>
+    <span>OmniFetch Pro</span>
     <span id="server-status">⏳ Checking server...</span>
   </div>
 

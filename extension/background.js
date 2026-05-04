@@ -14,6 +14,18 @@ const store = globalThis.__requestStore;
 
 let trackingEnabled = true;
 
+// Recorder state
+const recorderState = {
+  isRecording: false,
+  isPlaying: false,
+  actions: [],
+  tabId: null,
+  playbackTabId: null,
+  startUrl: '',
+  startTime: null,
+  pendingNavigation: false,
+};
+
 // Load saved state
 chrome.storage.local.get('trackingEnabled', (result) => {
   trackingEnabled = result.trackingEnabled !== false; // Default: enabled
@@ -426,6 +438,162 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       break;
     }
 
+    // ---------- Recorder & Player messages ----------
+
+    case 'START_RECORDING': {
+      recorderState.isRecording = true;
+      recorderState.actions = [];
+      recorderState.tabId = message.tabId || null;
+      recorderState.startUrl = message.url || '';
+      recorderState.startTime = Date.now();
+      // Inject recorder into the active tab
+      if (recorderState.tabId) {
+        chrome.tabs.sendMessage(recorderState.tabId, { type: 'INJECT_RECORDER' });
+      }
+      chrome.action.setBadgeText({ text: 'REC' });
+      chrome.action.setBadgeBackgroundColor({ color: '#f85149' });
+      console.log('[OmniFetch] 🔴 Recording started');
+      sendResponse({ ok: true });
+      break;
+    }
+
+    case 'STOP_RECORDING': {
+      recorderState.isRecording = false;
+      // Tell content script to stop recorder
+      if (recorderState.tabId) {
+        chrome.tabs.sendMessage(recorderState.tabId, { type: 'STOP_RECORDER' });
+      }
+      chrome.action.setBadgeText({ text: trackingEnabled ? '' : 'OFF' });
+      if (!trackingEnabled) {
+        chrome.action.setBadgeBackgroundColor({ color: '#f85149' });
+      }
+      console.log(`[OmniFetch] ⏹ Recording stopped (${recorderState.actions.length} actions)`);
+      sendResponse({ ok: true, actions: recorderState.actions });
+      break;
+    }
+
+    case 'RECORDER_EVENT': {
+      // Forward from content.js → recorder.js events
+      if (message.event === 'RECORDER_ACTION' && message.action) {
+        recorderState.actions.push(message.action);
+      } else if (message.event === 'RECORDER_STOPPED' && message.actions) {
+        // Merge final actions batch
+        recorderState.actions = message.actions;
+      } else if (message.event === 'RECORDER_BEFOREUNLOAD' && message.actions) {
+        recorderState.actions = message.actions;
+        // Add navigation action for the next page
+        recorderState.pendingNavigation = true;
+      }
+      sendResponse({ ok: true });
+      break;
+    }
+
+    case 'SAVE_RECORDING': {
+      const recording = {
+        id: `rec-${Date.now()}`,
+        name: message.name || `Recording ${new Date().toLocaleString()}`,
+        actions: message.actions || recorderState.actions,
+        startUrl: message.startUrl || recorderState.startUrl,
+        createdAt: new Date().toISOString(),
+        actionCount: (message.actions || recorderState.actions).length,
+      };
+      chrome.storage.local.get('recordings', (result) => {
+        const recordings = result.recordings || [];
+        recordings.unshift(recording);
+        chrome.storage.local.set({ recordings }, () => {
+          console.log(`[OmniFetch] 💾 Recording saved: "${recording.name}" (${recording.actionCount} actions)`);
+          sendResponse({ ok: true, recording });
+        });
+      });
+      break;
+    }
+
+    case 'GET_RECORDINGS': {
+      chrome.storage.local.get('recordings', (result) => {
+        sendResponse({ recordings: result.recordings || [] });
+      });
+      break;
+    }
+
+    case 'DELETE_RECORDING': {
+      chrome.storage.local.get('recordings', (result) => {
+        const recordings = (result.recordings || []).filter(r => r.id !== message.recordingId);
+        chrome.storage.local.set({ recordings }, () => {
+          sendResponse({ ok: true });
+        });
+      });
+      break;
+    }
+
+    case 'PLAY_RECORDING': {
+      recorderState.isPlaying = true;
+      recorderState.playbackTabId = message.tabId;
+      // Navigate to start URL first, then inject player
+      if (message.startUrl && message.tabId) {
+        chrome.tabs.update(message.tabId, { url: message.startUrl }, () => {
+          // Wait for page load, then inject player
+          const onComplete = (tabId, info) => {
+            if (tabId === message.tabId && info.status === 'complete') {
+              chrome.tabs.onUpdated.removeListener(onComplete);
+              setTimeout(() => {
+                chrome.tabs.sendMessage(message.tabId, {
+                  type: 'INJECT_PLAYER',
+                  actions: message.actions,
+                  speed: message.speed || 1,
+                });
+              }, 500);
+            }
+          };
+          chrome.tabs.onUpdated.addListener(onComplete);
+        });
+      } else if (message.tabId) {
+        chrome.tabs.sendMessage(message.tabId, {
+          type: 'INJECT_PLAYER',
+          actions: message.actions,
+          speed: message.speed || 1,
+        });
+      }
+      chrome.action.setBadgeText({ text: '▶' });
+      chrome.action.setBadgeBackgroundColor({ color: '#3fb950' });
+      sendResponse({ ok: true });
+      break;
+    }
+
+    case 'STOP_PLAYBACK': {
+      recorderState.isPlaying = false;
+      if (recorderState.playbackTabId) {
+        chrome.tabs.sendMessage(recorderState.playbackTabId, { type: 'STOP_PLAYER' });
+      }
+      chrome.action.setBadgeText({ text: trackingEnabled ? '' : 'OFF' });
+      sendResponse({ ok: true });
+      break;
+    }
+
+    case 'PLAYER_EVENT': {
+      // Player status updates — forward to popup if open
+      if (message.event === 'PLAYER_COMPLETED' || message.event === 'PLAYER_ERROR' || message.event === 'PLAYER_STOPPED') {
+        recorderState.isPlaying = false;
+        chrome.action.setBadgeText({ text: trackingEnabled ? '' : 'OFF' });
+      }
+      sendResponse({ ok: true });
+      break;
+    }
+
+    case 'GET_RECORDER_STATE': {
+      sendResponse({
+        isRecording: recorderState.isRecording,
+        isPlaying: recorderState.isPlaying,
+        actionCount: recorderState.actions.length,
+      });
+      break;
+    }
+
+    case 'EXPORT_PUPPETEER': {
+      const script = generatePuppeteerScript(message.recording);
+      sendResponse({ script });
+      break;
+    }
+
     default:
       sendResponse({ error: 'Unknown message type' });
   }
@@ -662,10 +830,75 @@ setInterval(() => {
 
 // Hook 3: Sync on service worker shutdown (best effort)
 self.addEventListener('activate', () => {
-  console.log('[HTTP Tracker Pro] Service worker activated');
+  console.log('[OmniFetch] Service worker activated');
 });
 
-console.log('[HTTP Tracker Pro] Background service worker started');
-console.log(`[HTTP Tracker Pro] Backend sync target: ${BACKEND_URL}`);
-console.log(`[HTTP Tracker Pro] API Key: ${API_KEY.slice(0, 8)}...`);
+// ============================================================================
+// PUPPETEER SCRIPT GENERATOR
+// ============================================================================
+
+function generatePuppeteerScript(recording) {
+  const lines = [
+    `const puppeteer = require('puppeteer');`,
+    ``,
+    `// Auto-generated by OmniFetch Pro`,
+    `// Recording: ${recording.name}`,
+    `// Created: ${recording.createdAt}`,
+    `// Actions: ${recording.actionCount}`,
+    ``,
+    `(async () => {`,
+    `  const browser = await puppeteer.launch({ headless: false, defaultViewport: null });`,
+    `  const page = await browser.newPage();`,
+    ``,
+    `  // Navigate to starting page`,
+    `  await page.goto('${recording.startUrl}', { waitUntil: 'networkidle2' });`,
+    ``,
+  ];
+
+  for (const action of recording.actions) {
+    const delay = Math.max(100, action.delay || 500);
+    lines.push(`  await page.waitForTimeout(${delay});`);
+
+    switch (action.type) {
+      case 'click':
+        lines.push(`  await page.waitForSelector('${action.selector.replace(/'/g, "\\'")}');`);
+        lines.push(`  await page.click('${action.selector.replace(/'/g, "\\'")}');`);
+        break;
+      case 'input':
+        lines.push(`  await page.waitForSelector('${action.selector.replace(/'/g, "\\'")}');`);
+        lines.push(`  await page.type('${action.selector.replace(/'/g, "\\'")}', '${(action.value || '').replace(/'/g, "\\'")}', { delay: 30 });`);
+        break;
+      case 'select':
+        lines.push(`  await page.select('${action.selector.replace(/'/g, "\\'")}', '${(action.value || '').replace(/'/g, "\\'")}');`);
+        break;
+      case 'check':
+        lines.push(`  const el = await page.$('${action.selector.replace(/'/g, "\\'")}');`);
+        lines.push(`  if (el) await el.click();`);
+        break;
+      case 'keypress':
+        lines.push(`  await page.keyboard.press('${action.key}');`);
+        break;
+      case 'scroll':
+        lines.push(`  await page.evaluate(() => window.scrollTo(${action.scrollX}, ${action.scrollY}));`);
+        break;
+      case 'submit':
+        lines.push(`  await page.$eval('${action.selector.replace(/'/g, "\\'")}', form => form.submit());`);
+        break;
+      case 'navigate':
+        lines.push(`  await page.goto('${action.url}', { waitUntil: 'networkidle2' });`);
+        break;
+    }
+    lines.push('');
+  }
+
+  lines.push(`  console.log('✅ Automation completed!');`);
+  lines.push(`  // await browser.close();`);
+  lines.push(`})();`);
+
+  return lines.join('\n');
+}
+
+console.log('[OmniFetch] Background service worker started');
+console.log(`[OmniFetch] Backend sync target: ${BACKEND_URL}`);
+console.log(`[OmniFetch] API Key: ${API_KEY.slice(0, 8)}...`);
 
