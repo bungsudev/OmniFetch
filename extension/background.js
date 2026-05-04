@@ -29,6 +29,49 @@ chrome.storage.local.get('trackingEnabled', (result) => {
 // ============================================================================
 
 /**
+ * Parse Chrome's requestBody object into a readable string
+ * Chrome provides: { formData: { key: [val1, val2] }, raw: [{ bytes: ArrayBuffer }] }
+ */
+function parseRequestBody(requestBody) {
+  if (!requestBody) return null;
+
+  // Form data (application/x-www-form-urlencoded or multipart/form-data)
+  if (requestBody.formData) {
+    const parsed = {};
+    for (const [key, values] of Object.entries(requestBody.formData)) {
+      parsed[key] = values.length === 1 ? values[0] : values;
+    }
+    return JSON.stringify(parsed, null, 2);
+  }
+
+  // Raw body (JSON, text, etc.)
+  if (requestBody.raw && requestBody.raw.length > 0) {
+    try {
+      const decoder = new TextDecoder('utf-8');
+      const parts = requestBody.raw.map(part => {
+        if (part.bytes) {
+          return decoder.decode(part.bytes);
+        }
+        return '';
+      });
+      const rawText = parts.join('');
+
+      // Try to pretty-print JSON
+      try {
+        const jsonObj = JSON.parse(rawText);
+        return JSON.stringify(jsonObj, null, 2);
+      } catch {
+        return rawText;
+      }
+    } catch {
+      return '[Binary data]';
+    }
+  }
+
+  return null;
+}
+
+/**
  * Capture outgoing request details
  */
 chrome.webRequest.onBeforeRequest.addListener(
@@ -45,7 +88,8 @@ chrome.webRequest.onBeforeRequest.addListener(
       type,
       initiator: initiator || '',
       timestamp: timeStamp,
-      requestBody: requestBody || null,
+      requestBody: parseRequestBody(requestBody),
+      requestBodyRaw: requestBody || null,
       phase: 'pending',
     });
   },
@@ -146,7 +190,7 @@ chrome.webRequest.onCompleted.addListener(
     const { requestId, statusCode, fromCache } = details;
     const entry = store.getRequest(requestId);
     if (entry) {
-      store.addRequest(requestId, {
+      const updated = store.addRequest(requestId, {
         ...entry,
         statusCode,
         fromCache: fromCache || false,
@@ -154,6 +198,8 @@ chrome.webRequest.onCompleted.addListener(
         completedAt: Date.now(),
         duration: Date.now() - (entry.timestamp || Date.now()),
       });
+      // Directly queue for backend sync
+      queueForSync(updated);
     }
   },
   { urls: ['<all_urls>'] }
@@ -167,13 +213,15 @@ chrome.webRequest.onErrorOccurred.addListener(
     const { requestId, error } = details;
     const entry = store.getRequest(requestId);
     if (entry) {
-      store.addRequest(requestId, {
+      const updated = store.addRequest(requestId, {
         ...entry,
         error: error || 'Unknown error',
         phase: 'error',
         completedAt: Date.now(),
         duration: Date.now() - (entry.timestamp || Date.now()),
       });
+      // Directly queue for backend sync
+      queueForSync(updated);
     }
   },
   { urls: ['<all_urls>'] }
@@ -251,7 +299,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     case 'FETCH_INTERCEPT': {
       // Enriched fetch/XHR data from injected script
       const reqId = `fetch-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
-      store.addRequest(reqId, {
+      const fetchEntry = store.addRequest(reqId, {
         url: message.url,
         method: message.method,
         tabId,
@@ -265,6 +313,41 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         phase: 'completed',
         source: 'injected',
       });
+      // Directly sync fetch-intercepted requests
+      queueForSync(fetchEntry);
+      sendResponse({ ok: true });
+      break;
+    }
+
+    case 'FORM_SUBMIT': {
+      // Native HTML form submission captured by injected script
+      const formReqId = `form-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+      const formEntry = store.addRequest(formReqId, {
+        url: message.url,
+        method: message.method || 'POST',
+        tabId,
+        type: 'form-submit',
+        requestHeaders: {
+          'Content-Type': message.enctype || 'application/x-www-form-urlencoded',
+        },
+        requestBody: JSON.stringify(message.fields, null, 2),
+        statusCode: null,
+        responseHeaders: {},
+        responseBody: null,
+        timestamp: message.timestamp || Date.now(),
+        phase: 'completed',
+        source: 'form',
+        formMetadata: {
+          formId: message.formId,
+          formName: message.formName,
+          formAction: message.formAction,
+          enctype: message.enctype,
+          fieldCount: message.fieldCount,
+          programmatic: message.programmatic || false,
+        },
+      });
+      queueForSync(formEntry);
+      console.log(`[HTTP Tracker Pro] 📝 Form submit captured: ${message.method} ${message.url} (${message.fieldCount} fields)`);
       sendResponse({ ok: true });
       break;
     }

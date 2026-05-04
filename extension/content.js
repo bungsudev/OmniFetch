@@ -72,6 +72,22 @@
           timestamp: msg.timestamp,
         });
         break;
+
+      case 'FORM_SUBMIT':
+        chrome.runtime.sendMessage({
+          type: 'FORM_SUBMIT',
+          url: msg.url,
+          method: msg.method,
+          enctype: msg.enctype,
+          fields: msg.fields,
+          formId: msg.formId,
+          formName: msg.formName,
+          formAction: msg.formAction,
+          fieldCount: msg.fieldCount,
+          programmatic: msg.programmatic || false,
+          timestamp: msg.timestamp,
+        });
+        break;
     }
   });
 

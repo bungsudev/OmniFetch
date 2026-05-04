@@ -183,6 +183,16 @@
           <input type="text" id="req-filter-search" placeholder="Search URL...">
           <button id="req-filter-apply" class="btn-sm">Apply</button>
           <button id="req-filter-clear" class="btn-sm btn-ghost">Clear</button>
+          <div class="sort-controls">
+            <select id="req-sort-field" title="Sort by">
+              <option value="captured_at">📅 Captured Date</option>
+              <option value="method">📝 Method</option>
+              <option value="status_code">🔢 Status Code</option>
+              <option value="url">🔗 URL</option>
+              <option value="duration_ms">⏱️ Duration</option>
+            </select>
+            <button id="req-sort-order" class="btn-sm" title="Toggle sort order">↓ Newest</button>
+          </div>
           <div style="margin-left:auto; display:flex; gap:6px;">
             <button id="btn-export-postman" class="btn-sm" title="Export filtered requests as Postman Collection">📮 Export Postman</button>
             <button id="btn-export-json" class="btn-sm" title="Export as JSON">📄 Export JSON</button>
@@ -197,13 +207,13 @@
             <thead>
               <tr>
                 <th style="width: 50px;">#</th>
-                <th style="width: 70px;">Method</th>
-                <th>URL</th>
-                <th style="width: 60px;">Status</th>
+                <th style="width: 70px;" class="sortable-th" data-sort="method" onclick="sortColumn('method')">Method <span class="sort-icon"></span></th>
+                <th class="sortable-th" data-sort="url" onclick="sortColumn('url')">URL <span class="sort-icon"></span></th>
+                <th style="width: 60px;" class="sortable-th" data-sort="status_code" onclick="sortColumn('status_code')">Status <span class="sort-icon"></span></th>
                 <th style="width: 70px;">Type</th>
-                <th style="width: 70px;">Time</th>
+                <th style="width: 70px;" class="sortable-th" data-sort="duration_ms" onclick="sortColumn('duration_ms')">Time <span class="sort-icon"></span></th>
                 <th style="width: 70px;">Domain</th>
-                <th style="width: 140px;">Captured</th>
+                <th style="width: 140px;" class="sortable-th" data-sort="captured_at" onclick="sortColumn('captured_at')">Captured <span class="sort-icon"></span></th>
                 <th style="width: 80px;">Actions</th>
               </tr>
             </thead>

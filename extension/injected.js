@@ -213,6 +213,79 @@
   };
 
   // ========================================================================
+  // INTERCEPT NATIVE FORM SUBMISSIONS
+  // ========================================================================
+
+  // Capture native <form> submit (non-AJAX)
+  document.addEventListener('submit', (e) => {
+    const form = e.target;
+    if (!form || form.tagName !== 'FORM') return;
+
+    try {
+      const formData = new FormData(form);
+      const fields = {};
+      for (const [key, value] of formData.entries()) {
+        if (fields[key]) {
+          // Multiple values (checkboxes, multi-select)
+          if (Array.isArray(fields[key])) {
+            fields[key].push(value instanceof File ? `[File: ${value.name}]` : value);
+          } else {
+            fields[key] = [fields[key], value instanceof File ? `[File: ${value.name}]` : value];
+          }
+        } else {
+          fields[key] = value instanceof File ? `[File: ${value.name}, ${value.size} bytes, ${value.type}]` : value;
+        }
+      }
+
+      const action = form.action || window.location.href;
+      const method = (form.method || 'GET').toUpperCase();
+      const enctype = form.enctype || 'application/x-www-form-urlencoded';
+
+      postToContentScript({
+        type: 'FORM_SUBMIT',
+        url: action,
+        method,
+        enctype,
+        fields,
+        formId: form.id || null,
+        formName: form.name || null,
+        formAction: form.getAttribute('action') || null,
+        fieldCount: Object.keys(fields).length,
+        timestamp: Date.now(),
+      });
+    } catch {
+      // Silently fail
+    }
+  }, true); // Use capture phase to fire before form submits
+
+  // Also intercept form.submit() calls
+  const originalFormSubmit = HTMLFormElement.prototype.submit;
+  HTMLFormElement.prototype.submit = function () {
+    try {
+      const formData = new FormData(this);
+      const fields = {};
+      for (const [key, value] of formData.entries()) {
+        fields[key] = value instanceof File ? `[File: ${value.name}]` : value;
+      }
+
+      postToContentScript({
+        type: 'FORM_SUBMIT',
+        url: this.action || window.location.href,
+        method: (this.method || 'GET').toUpperCase(),
+        enctype: this.enctype || 'application/x-www-form-urlencoded',
+        fields,
+        formId: this.id || null,
+        formName: this.name || null,
+        programmatic: true,
+        timestamp: Date.now(),
+      });
+    } catch {
+      // Silently fail
+    }
+    return originalFormSubmit.call(this);
+  };
+
+  // ========================================================================
   // INTERCEPT WINDOW.LOCATION CHANGES
   // ========================================================================
 

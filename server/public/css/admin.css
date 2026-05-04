@@ -573,6 +573,10 @@ a:hover { text-decoration: underline; }
 .badge-delete { background: rgba(248,81,73,.12); color: var(--red); }
 .badge-other { background: rgba(139,148,158,.12); color: var(--text-3); }
 
+.badge-form { background: rgba(57,210,192,.12); color: var(--cyan); }
+.badge-source-form { background: rgba(57,210,192,.1); color: var(--cyan); border: 1px solid rgba(57,210,192,.2); }
+.badge-source-injected { background: rgba(188,140,255,.1); color: var(--purple); border: 1px solid rgba(188,140,255,.2); }
+
 .badge-2xx { background: rgba(63,185,80,.12); color: var(--green); }
 .badge-3xx { background: rgba(210,153,34,.12); color: var(--yellow); }
 .badge-4xx { background: rgba(248,81,73,.12); color: var(--red); }
@@ -719,6 +723,47 @@ a:hover { text-decoration: underline; }
 }
 
 .filter-bar-admin input::placeholder { color: var(--text-5); }
+
+/* Sort controls */
+.sort-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 8px;
+  border-left: 1px solid var(--border);
+  margin-left: 4px;
+}
+
+/* Sortable table headers */
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--transition);
+  position: relative;
+}
+
+.sortable-th:hover {
+  color: var(--blue) !important;
+}
+
+.sortable-th .sort-icon::after {
+  content: '⇅';
+  margin-left: 4px;
+  font-size: 10px;
+  opacity: 0.3;
+}
+
+.sortable-th.sort-desc .sort-icon::after {
+  content: '↓';
+  opacity: 1;
+  color: var(--blue);
+}
+
+.sortable-th.sort-asc .sort-icon::after {
+  content: '↑';
+  opacity: 1;
+  color: var(--blue);
+}
 
 /* ================================================================== */
 /* MODAL                                                               */

@@ -17,6 +17,8 @@
     requestsPage: 1,
     requestsLimit: 50,
     filters: {},
+    sort: 'captured_at',
+    order: 'DESC',
     websites: [],
   };
 
@@ -190,11 +192,16 @@
       const params = new URLSearchParams();
       params.set('page', state.requestsPage);
       params.set('limit', state.requestsLimit);
+      params.set('sort', state.sort);
+      params.set('order', state.order);
 
       if (state.filters.method) params.set('method', state.filters.method);
       if (state.filters.status) params.set('status', state.filters.status);
       if (state.filters.website_id) params.set('website_id', state.filters.website_id);
       if (state.filters.search) params.set('search', state.filters.search);
+
+      // Update sort UI indicators
+      updateSortUI();
 
       const data = await api.get(`/requests?${params}`);
       const tbody = document.getElementById('requests-tbody');
@@ -216,7 +223,7 @@
             <td>${methodBadge}</td>
             <td class="url-text" title="${escapeHtml(r.url)}">${escapeHtml(urlShort)}</td>
             <td>${statusBadge}</td>
-            <td><span class="badge badge-other">${r.request_type || '-'}</span></td>
+            <td>${getTypeBadge(r.request_type, r.source)}</td>
             <td class="time-text">${r.duration_ms ? Math.round(r.duration_ms) + 'ms' : '-'}</td>
             <td><span class="badge-domain">${escapeHtml(r.domain || '-')}</span></td>
             <td class="time-text">${formatDate(r.captured_at)}</td>
@@ -564,6 +571,57 @@
     document.getElementById('btn-export-postman')?.addEventListener('click', exportAllPostman);
     document.getElementById('btn-export-json')?.addEventListener('click', exportAllJSON);
     document.getElementById('btn-export-curl')?.addEventListener('click', exportAllCurl);
+
+    // Sort controls
+    document.getElementById('req-sort-field')?.addEventListener('change', (e) => {
+      state.sort = e.target.value;
+      state.requestsPage = 1;
+      loadRequests();
+    });
+
+    document.getElementById('req-sort-order')?.addEventListener('click', () => {
+      state.order = state.order === 'DESC' ? 'ASC' : 'DESC';
+      state.requestsPage = 1;
+      loadRequests();
+    });
+  }
+
+  // ====================================================================
+  // SORT HELPERS
+  // ====================================================================
+
+  // Called from table header clicks
+  window.sortColumn = function (field) {
+    if (state.sort === field) {
+      state.order = state.order === 'DESC' ? 'ASC' : 'DESC';
+    } else {
+      state.sort = field;
+      state.order = 'DESC';
+    }
+    // Sync the dropdown
+    const sortField = document.getElementById('req-sort-field');
+    if (sortField) sortField.value = state.sort;
+    state.requestsPage = 1;
+    loadRequests();
+  };
+
+  function updateSortUI() {
+    // Update order button text
+    const orderBtn = document.getElementById('req-sort-order');
+    if (orderBtn) {
+      orderBtn.textContent = state.order === 'DESC' ? '↓ Newest' : '↑ Oldest';
+    }
+    // Update sort dropdown
+    const sortField = document.getElementById('req-sort-field');
+    if (sortField) sortField.value = state.sort;
+
+    // Update table header indicators
+    document.querySelectorAll('.sortable-th').forEach(th => {
+      th.classList.remove('sort-asc', 'sort-desc');
+      if (th.dataset.sort === state.sort) {
+        th.classList.add(state.order === 'ASC' ? 'sort-asc' : 'sort-desc');
+      }
+    });
   }
 
   // ====================================================================
@@ -632,6 +690,16 @@
     else if (status >= 400 && status < 500) cls = 'badge-4xx';
     else if (status >= 500) cls = 'badge-5xx';
     return `<span class="badge ${cls}">${status}</span>`;
+  }
+
+  function getTypeBadge(type, source) {
+    if (type === 'form-submit' || source === 'form') {
+      return '<span class="badge badge-form">📝 FORM</span>';
+    }
+    if (source === 'injected' && (type === 'fetch' || type === 'xhr')) {
+      return `<span class="badge badge-source-injected">${type}</span>`;
+    }
+    return `<span class="badge badge-other">${type || '-'}</span>`;
   }
 
   function buildCurl(req) {
